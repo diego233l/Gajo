@@ -11,6 +11,8 @@
   <ItemGroup>
     <!-- Reads the text layer of PDFs (Apache-2.0, fully managed). -->
     <PackageReference Include="PdfPig" Version="0.1.16" />
+    <!-- Opens RAR, 7z and other archives (MIT). -->
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
   </ItemGroup>
 
 </Project>
