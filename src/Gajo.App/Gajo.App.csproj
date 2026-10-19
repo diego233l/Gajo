@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Windows 10 SDK projection: gives access to the built-in PDF renderer and OCR. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <!-- WPF + WinForms implicit usings collide (Application, MessageBox…), so usings are explicit. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Gajo</RootNamespace>
+    <AssemblyName>Gajo</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\gajo.ico</ApplicationIcon>
+    <Version>0.8.0</Version>
+    <Product>Gajo</Product>
+    <Description>Conversor de archivos: arrastra, pulsa Mayús y suelta.</Description>
+    <SatelliteResourceLanguages>es</SatelliteResourceLanguages>
+    <!-- WFAC010 targets WinForms-only apps; WPF reads DPI awareness from the manifest. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\gajo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gajo.Core\Gajo.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Built-in conversion engine. On publish, FFmpeg (Gyan "essentials" build, GPL) is downloaded
+    once into third_party/ and appended, Brotli-compressed, to the single Gajo.exe.
+    Gajo unpacks it to %TEMP%\Gajo at runtime. Disable with -p:EmbedFfmpeg=false.
+  -->
+  <PropertyGroup>
+    <EmbedFfmpeg Condition="'$(EmbedFfmpeg)' == ''">true</EmbedFfmpeg>
+    <FfmpegVersion>9.0.2</FfmpegVersion>
+    <FfmpegUrl>https://github.com/GyanD/codexffmpeg/releases/download/$(FfmpegVersion)/ffmpeg-$(FfmpegVersion)-essentials_build.zip</FfmpegUrl>
+    <FfmpegDir>$(MSBuildThisFileDirectory)..\..\third_party\ffmpeg-$(FfmpegVersion)\</FfmpegDir>
+    <FfmpegDownloadDir>$(MSBuildThisFileDirectory)obj\ffmpeg-download\</FfmpegDownloadDir>
+    <PackProject>$(MSBuildThisFileDirectory)..\..\tools\Gajo.Pack\Gajo.Pack.csproj</PackProject>
+    <DotnetExe Condition="'$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</DotnetExe>
+    <DotnetExe Condition="'$(DOTNET_HOST_PATH)' == ''">dotnet</DotnetExe>
+  </PropertyGroup>
+
+  <Target Name="GajoFetchFfmpeg" Condition="'$(EmbedFfmpeg)' == 'true' And !Exists('$(FfmpegDir)ffmpeg.exe')">
+    <Message Importance="high" Text="Gajo: descargando FFmpeg $(FfmpegVersion) (solo la primera vez)..." />
+    <DownloadFile SourceUrl="$(FfmpegUrl)" DestinationFolder="$(FfmpegDownloadDir)" DestinationFileName="ffmpeg.zip" Retries="3" />
+    <Unzip SourceFiles="$(FfmpegDownloadDir)ffmpeg.zip" DestinationFolder="$(FfmpegDownloadDir)x" />
+    <ItemGroup>
+      <_GajoFfmpegExe Include="$(FfmpegDownloadDir)x\**\bin\ffmpeg.exe" />
+      <_GajoFfmpegLicense Include="$(FfmpegDownloadDir)x\**\LICENSE" />
+    </ItemGroup>
+    <Error Condition="'@(_GajoFfmpegExe)' == ''" Text="El zip de FFmpeg no contiene bin\ffmpeg.exe" />
+    <Copy SourceFiles="@(_GajoFfmpegExe)" DestinationFolder="$(FfmpegDir)" />
+    <Copy SourceFiles="@(_GajoFfmpegLicense)" DestinationFolder="$(FfmpegDir)" />
+    <RemoveDir Directories="$(FfmpegDownloadDir)" />
+  </Target>
+
+  <Target Name="GajoEmbedFfmpeg" AfterTargets="Publish" DependsOnTargets="GajoFetchFfmpeg"
+          Condition="'$(EmbedFfmpeg)' == 'true' And '$(PublishSingleFile)' == 'true'">
+    <Message Importance="high" Text="Gajo: integrando FFmpeg en $(AssemblyName).exe (tarda ~1 minuto)..." />
+    <Exec Command="&quot;$(DotnetExe)&quot; run --project &quot;$(PackProject)&quot; -c Release -- &quot;$(PublishDir)$(AssemblyName).exe&quot; &quot;$(FfmpegDir)ffmpeg.exe&quot;" />
+  </Target>
+
+</Project>

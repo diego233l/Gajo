@@ -1,0 +1,16 @@
+GAJO v0.8 - portable para Windows 10/11 (64 bits)
+
+Todo va dentro de Gajo.exe, incluido el motor de conversion. No hay que instalar ni descargar nada.
+
+1. Copia Gajo.exe a cualquier carpeta y abrelo.
+   Si Windows avisa con "Windows protegio su PC" (la app no esta firmada):
+   pulsa "Mas informacion" y despues "Ejecutar de todas formas".
+2. Gajo queda en los iconos ocultos de la barra de tareas (flecha ^ junto al reloj).
+3. Arrastra un archivo y, sin soltar el raton, pulsa Mayus. Suelta sobre el formato que quieras.
+   Para cancelar: suelta en el centro de la rueda o pulsa Esc.
+
+Ajustes: doble clic en el icono. Salir: clic derecho > Salir.
+Para quitarlo: sal de Gajo y borra Gajo.exe (y Gajo.settings.json si existe).
+Si algo falla: clic derecho en el icono > "Abrir registro de errores" y pasaselo a Claude.
+
+Incluye FFmpeg (licencia GPL v3).

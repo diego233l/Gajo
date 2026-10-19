@@ -1,0 +1,6 @@
+bin/
+obj/
+publish/
+third_party/
+.vs/
+*.user

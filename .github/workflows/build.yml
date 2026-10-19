@@ -1,0 +1,48 @@
+name: Compilar Gajo
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+
+      - name: Publicar Gajo.exe (con FFmpeg integrado)
+        run: dotnet publish src/Gajo.App/Gajo.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish
+
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME } else { "dev" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item publish/Gajo.exe dist/
+          Copy-Item packaging/LEEME.txt dist/
+          Copy-Item third_party/ffmpeg-*/LICENSE dist/LICENCIA-FFmpeg.txt
+          Compress-Archive -Path dist/* -DestinationPath "Gajo-$version-win-x64.zip" -Force
+          "ZIP=Gajo-$version-win-x64.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Gajo-win-x64
+          path: ${{ env.ZIP }}
+
+      - name: Publicar release (solo en tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP }}
+          generate_release_notes: true
